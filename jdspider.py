@@ -108,7 +108,7 @@ class JDSpider:
     ) -> (
         list
     ):  # 获取商品id，为了得到具体商品页面的网址。结果保存在self.productId的数组里
-        response = requests.get(self.startUrl, headers=self.headers2)
+        response = requests.get(self.startUrl, headers=self.headers2, verify=False)
         default_logger.info("获取同类产品的搜索 url 结果：" + self.startUrl)
         if response.status_code != 200:
             default_logger.warning("状态码错误，爬虫连接异常！")
@@ -130,6 +130,7 @@ class JDSpider:
         )
         if len(self.productsId) == 0:
             default_logger.warning(f"完了，self.productsId是空的，后面会导致默认评价了")
+            sum_ = 0
         elif 0 < len(self.productsId) < 8:  # limit the sum of products
             sum_ = len(self.productsId)
         else:
@@ -148,7 +149,7 @@ class JDSpider:
                     default_logger.info(
                         "爬取商品评价的 url 链接是" + url + "，商品的 id 是：" + id_
                     )
-                    response = requests.get(url, params=param)
+                    response = requests.get(url, params=param, verify=False)
                 except Exception as e:
                     default_logger.warning(e)
                     break

@@ -1,0 +1,16 @@
+# 配置模板：复制本文件为 config.yml 或 config.user.yml，填入你自己的 Cookie
+#
+# Cookie 获取方法：
+#   1. 电脑 Chrome 登录京东
+#   2. 打开 https://club.jd.com/myJdcomments/myJdcomment.action
+#   3. F12 -> Network -> 刷新 -> 第一个请求 -> Request Headers
+#   4. 复制 cookie: 后面的整段值
+#
+# 注意：config.yml / config.user.yml 含明文 Cookie，已被 .gitignore 排除，请勿提交！
+
+user:
+  cookie: 'pt_key=你的pt_key; pt_pin=你的pt_pin; shshshfpa=xxx; ...'
+
+  # 以下可选：调节提交节奏（防风控），默认 30 秒 / 30~60 秒
+  # min_submit_interval: 30
+  # sleep_range: [30, 60]

@@ -32,7 +32,8 @@ more_cookie分支是有需要多账号进行批量评论诞生的分支。
 ### 安装依赖库
 
 ```bash
-pip install -r requirements.
+pip install -r requirements.txt
+```
 
 请用户自行判断使用哪个分支。
 
@@ -69,6 +70,8 @@ python3 auto_comment_plus.py
 ```
 
 **注意:** 请根据设备环境换用不同的解释器路径，如 `python`、`py`。
+
+> 📖 完整的用法说明（浏览器版 / 本地版两套流程、Cookie 获取步骤、命令行参数、常见问题）请看 **[USAGE.md](USAGE.md)**。
 
 ### 命令行参数
 

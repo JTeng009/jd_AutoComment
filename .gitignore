@@ -131,7 +131,23 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# user config
+# user config（含明文 Cookie，绝不提交）
+config.yml
 config.user.yml
+
+# browser login state (contains plaintext cookie)
+jd_state.json
+
+# runtime data
+failed_orders.txt
+img/
+*.log
+
+# tool dirs
+.codebuddy/
+.atomcode/
+.idea/
+__pycache__/
+
 .idea/
 .vscode/
