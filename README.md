@@ -1,122 +1,110 @@
 # jd_AutoComment
 
-# 本分支为stable分支，功能基本可用，但更新可能不及时，请自行选择
+京东批量自动评价工具。基于京东评价中心接口与真实浏览器自动化，自动生成贴合商品品类的评价文案并晒图，支持普通评价与追评。
 
-## 鸣谢
+> 本项目 Fork 自 [Dimlitter/jd_AutoComment](https://github.com/Dimlitter/jd_AutoComment)，在其基础上重构了文案生成、风控对策与提交链路，并新增浏览器自动化版本。上游致谢见文末。
 
-感谢[qiu-lzsnmb](https://github.com/qiu-lzsnmb)大佬的脚本和[Zhang Jiale](https://github.com/2274900)大佬的评论爬虫
+## 功能特性
 
-源库链接：[自动评价](https://github.com/qiu-lzsnmb/jd_lzsnmb)
-[评论爬虫](https://github.com/2274900/JD_comment_spider)
+- **双提交方式**：真实浏览器自动化（`browser_comment.py`，推荐）与 requests 直连（`auto_comment_plus.py`）两套实现
+- **自动晒图**：抓取商品其他买家的晒单图，字节微调避免与原图重复后上传京东图床
+- **品类化文案**：内置 7 大品类文案池（药品保健/美妆个护/食品饮料/数码家电/母婴/服饰/家居日用），根据商品名自动匹配
+- **TF-IDF 关键词提取**：分词 + 统计评分模型从商品名提取核心品类词（如"电动车头盔…M码"提取"头盔"），品牌词/属性词/病症词自动过滤
+- **风控对策**：双重编码提交、失败退避重试、失败订单持久化跳过、每单 30~60 秒随机休眠
+- **自动过滤**：试用装/赠品/外卖/虚拟权益订单自动跳过
+- **追评 UI 模式**：逐字符键入 + 页面控件传图 + 5 星评分，由京东页面自身 JS 完成提交，稳定性最高
 
-### 本脚本只是对以上两位的结合以及魔改，用于解决评论文不对题的问题。经测试，本脚本能初步解决这一问题
+## 项目结构
 
-## 思路
+```
+jd_AutoComment/
+├── browser_comment.py    # 浏览器版（推荐）：普通评价 + 追评，含晒图
+├── auto_comment_plus.py  # 本地 requests 版：普通评价 + 追评 + 服务评价
+├── jdspider.py           # 评论爬虫（爬同类商品好评作为文案素材）
+├── config.example.yml    # 配置模板（复制为 config.yml 填入 Cookie）
+├── USAGE.md              # 完整使用说明（参数表、FAQ）
+├── requirements.txt
+└── .gitignore            # 已排除 Cookie/登录态/运行数据
+```
 
-由爬虫先行对商品的既有评价进行爬取，在此基础上进行自己的评价
+## 快速开始
 
-## 用法
+### 1. 环境要求
 
-> 请先确保python版本为3.8+，最好是python3.10+。
+- Python 3.8+（推荐 3.10+）
+- Node.js 16+（仅浏览器版需要）
 
-### 分支说明
-
-main分支为开发版，更新较快，但由于开发者cookie数量远远不足以满足开发需求，测试不够完备，可能存在bug。
-
-stable分支为稳定版，更新较慢，基本可以稳定使用，但功能可能存在欠缺。
-
-more_cookie分支是有需要多账号进行批量评论诞生的分支。
-> 由于作者只有一个 jd 账号，因此该more_cookie分支，需要有多账号的朋友进行测试。
-目前代码逻辑是 先普通评价-》再追评-》再第二个账号继续执行前面的顺序。所以你多账号可能要历史追评结束后才会执行，cookie 可能会失效，如果很多个 jd 账号话。可能实际上效果没那么好。
-
-### 安装依赖库
+### 2. 安装依赖
 
 ```bash
 pip install -r requirements.txt
+
+# 浏览器版还需要（一次性）：
+npm i -g agent-browser
+agent-browser install
 ```
 
-请用户自行判断使用哪个分支。
-
-### 快速使用
-
-在终端中执行：
+### 3. 配置 Cookie
 
 ```bash
-git clone https://github.com/Dimlitter/jd_AutoComment.git
-cd jd_AutoComment
-pip install -r requirements.txt
+copy config.example.yml config.yml
+# 编辑 config.yml，填入完整浏览器 Cookie
 ```
 
-获取电脑版ck后填入配置文件。可以选择填入默认配置文件 `config.yml` ；也可以填入用户配置文件 `config.user.yml` （需要新建后将 `config.yml` 中的内容复制到该文件中），避免后续的更新覆盖 `config.yml` 中的内容。
+Cookie 获取：电脑 Chrome 登录京东 → 打开 `club.jd.com` 的"我的评价"页 → F12 → Network → 刷新 → 第一个请求 → 复制 `cookie:` 后的整段值。
 
-需要填入如下内容：
+> 注意：仅 `pt_key` + `pt_pin` 不够，必须是完整 Cookie。Cookie 会过期，失效后重新抓取。
 
-```yml
-user:
-  cookie: '<Cookie>'
-```
-
-例如，若获取得到的ck为 `a=1; b=2; c=3` ，则配置文件中填入：
-
-```yml
-user:
-  cookie: 'a=1; b=2; c=3'
-```
-
-最后运行 `auto_comment_plus.py` ：
+### 4. 运行
 
 ```bash
-python3 auto_comment_plus.py
+# 先 dry-run 看一遍会评哪些单
+python browser_comment.py --dry-run
+
+# 普通评价 1 单（文字+图片），验证后再放量
+python browser_comment.py --mode ordinary --limit 1
+
+# 追评 1 单（文字+图片+5星）
+python browser_comment.py --mode review --limit 1
+
+# 全量
+python browser_comment.py --mode ordinary
+python browser_comment.py --mode review
 ```
 
-**注意:** 请根据设备环境换用不同的解释器路径，如 `python`、`py`。
+本地 requests 版（不需要 agent-browser，含服务评价，但更易触发风控）：
 
-> 📖 完整的用法说明（浏览器版 / 本地版两套流程、Cookie 获取步骤、命令行参数、常见问题）请看 **[USAGE.md](USAGE.md)**。
-
-### 命令行参数
-
-本程序支持命令行参数：
-
-```text
-usage: auto_comment_plus.py [-h] [--dry-run] [--log-level LOG_LEVEL] [-o LOG_FILE]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --dry-run             have a full run without comment submission
-  --log-level LOG_LEVEL
-                        specify logging level (default: info)
-  -o LOG_FILE, --log-file LOG_FILE
-                        specify logging file
+```bash
+python auto_comment_plus.py
 ```
 
-**`-h`, `--help`:**
+完整参数说明、工作原理、常见问题见 [USAGE.md](USAGE.md)。
 
-显示帮助文本。
+## 工作原理（简述）
 
-**`--dry-run`:**
+1. **订单解析**：读取京东评价中心"待评价订单/待追评"列表，按关键词与链接特征过滤无效订单
+2. **文案生成**：posseg 分词 + 自定义品类词典 + TF-IDF 特异度评分提取核心品类词，从对应品类文案池随机组句，同轮去重
+3. **晒图**：拉取商品晒单图 → 随机位翻转一个字节（避免与原图 MD5 相同）→ 上传京东图床
+4. **提交**：
+   - 普通评价走页面内 fetch，`content` 双重 percent-编码（与京东页面行为一致，否则存储乱码）
+   - 追评走真实页面 UI：逐字符键盘事件键入、页面控件上传图片、点 5 星、发表
+5. **风控**：提交最小间隔 30 秒、随机休眠 30~60 秒、失败退避重试（60s/120s ×3）、错误码识别（无资格/风控/需实名）、失败订单记录跳过
 
-完整地运行程序，但不实际提交评论。
+## 免责声明
 
-**`--log-level LOG_LEVEL`:**
+本项目为 Python 学习交流的开源非营利项目，仅作为程序员之间相互学习交流之用。
 
-设置输出日志的等级。默认为 `INFO` 。可选等级为 `DEBUG`、`INFO`、`WARNING`、`ERROR` ，输出内容量依次递减。
+- 严禁用于商业用途，禁止使用本项目进行任何盈利活动
+- 京东对自动化访问有风控机制，不当使用可能导致账号异常，请自行评估风险并控制频率
+- 使用者请遵从京东相关政策与法律法规，对一切非法使用所产生的后果，本项目概不负责
+- Cookie 属于敏感凭证，请勿提交到 Git 仓库或分享给他人
 
-**注意:** 若你需要提交 issue 来报告一个 bug ，请将该选项设置为 `DEBUG` 。
+## 致谢
 
-**`-o LOG_FILE`:**
+- [qiu-lzsnmb/jd_lzsnmb](https://github.com/qiu-lzsnmb/jd_lzsnmb) - 自动评价脚本
+- [Zhang Jiale/JD_comment_spider](https://github.com/2274900/JD_comment_spider) - 评论爬虫
+- [Dimlitter/jd_AutoComment](https://github.com/Dimlitter/jd_AutoComment) - 上游整合项目
 
-设置输出日志文件的路径。若无此选项，则不输出到文件。
+## 许可证
 
-## 声明
-
-本项目为Python学习交流的开源非营利项目，仅作为程序员之间相互学习交流之用。
-
-严禁用于商业用途，禁止使用本项目进行任何盈利活动。
-
-使用者请遵从相关政策。对一切非法使用所产生的后果，我们概不负责。
-
-本项目对您如有困扰请联系我们删除。
-
-## 证书
-
-![AUR](https://img.shields.io/badge/license-MIT%20License%202.0-green.svg)
+[MIT License](LICENSE)
